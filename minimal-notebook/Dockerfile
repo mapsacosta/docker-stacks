@@ -1,9 +1,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-ARG BASE_CONTAINER=jupyter/base-notebook
-FROM $BASE_CONTAINER
+FROM ssiregistry.fnal.gov:443/ecf-gco/jupyter:base_notebook
 
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+LABEL maintainer="Maria A. <macosta@fnal.gov>"
 
 USER root
 

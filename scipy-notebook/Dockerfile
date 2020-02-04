@@ -1,16 +1,22 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-ARG BASE_CONTAINER=jupyter/minimal-notebook
-FROM $BASE_CONTAINER
+FROM ssiregistry.fnal.gov:443/ecf-gco/jupyter:minimal_notebook_c7
 
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+LABEL maintainer="Maria A. <macosta@fnal.gov>"
 
 USER root
 
+#Fix permissions as root
+RUN fix-permissions "$(dirname $CONDA_DIR)" && \
+    fix-permissions "$(dirname $HOME)"
+
 # ffmpeg for matplotlib anim
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
+RUN yum -y update && \
+    yum -y install epel-release && \
+    rpm -v --import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro && \
+    rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm && \
+    yum -y install ffmpeg && \
+    yum clean all && rm -rf /var/cache/yum
 
 USER $NB_UID
 
@@ -54,8 +60,10 @@ RUN conda install --quiet --yes \
     npm cache clean --force && \
     rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
     rm -rf /home/$NB_USER/.cache/yarn && \
-    rm -rf /home/$NB_USER/.node-gyp && \
-    fix-permissions $CONDA_DIR && \
+    rm -rf /home/$NB_USER/.node-gyp 
+
+USER root
+RUN fix-permissions $CONDA_DIR && \
     fix-permissions /home/$NB_USER
 
 # Install facets which does not have a pip or conda package at the moment

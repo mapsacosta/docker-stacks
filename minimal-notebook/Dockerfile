@@ -1,13 +1,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-FROM ssiregistry.fnal.gov:443/ecf-gco/jupyter:base_notebook
+FROM ssiregistry.fnal.gov:443/ecf-gco/jupyter:base_notebook_c7
 
 LABEL maintainer="Maria A. <macosta@fnal.gov>"
 
 USER root
 
 # Install all OS dependencies for fully functional notebook server
-RUN apt-get update && apt-get install -yq --no-install-recommends \
+RUN yum -y update && yum -y install \
     build-essential \
     emacs \
     git \
@@ -29,7 +29,8 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
     tzdata \
     unzip \
     nano \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    vim \
+    && yum clean all && rm -rf /var/cache/yum
 
-# Switch back to jovyan to avoid accidental container runs as root
+# Switch back to jupyter to avoid accidental container runs as root
 USER $NB_UID

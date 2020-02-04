@@ -3,7 +3,8 @@
 
 # Ubuntu 18.04 (bionic) from 2019-10-29
 # https://github.com/tianon/docker-brew-ubuntu-core/commit/d4313e13366d24a97bd178db4450f63e221803f1
-FROM ubuntu:bionic-20191029@sha256:6e9f67fa63b0323e9a1e587fd71c561ba48a034504fb804fd26fd8800039835d
+FROM centos:7
+ENV container docker
 
 LABEL maintainer="Maria A. <macosta@fnal.gov>"
 ARG NB_USER="jupyter"
@@ -14,9 +15,8 @@ USER root
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update \
- && apt-get install -yq --no-install-recommends \
+RUN yum -y update \
+ && yum -y install \
     wget \
     bzip2 \
     ca-certificates \
@@ -24,10 +24,10 @@ RUN apt-get update \
     locales \
     fonts-liberation \
     run-one \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+ && yum clean all && rm -rf /var/cache/yum
 
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
-    locale-gen
+#RUN echo 'LANG="en_US.UTF-8"' > /etc/default/locale && \
+#    localedef -v -c -i en_US -f UTF-8 en_US.UTF-8
 
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
@@ -48,12 +48,13 @@ RUN chmod a+rx /usr/local/bin/fix-permissions
 # Enable prompt color in the skeleton .bashrc before creating the default NB_USER
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc
 
-# Create NB_USER wtih name jovyan user with UID=1000 and in the 'users' group
+# Create NB_USER wtih name jupyter user with UID=56344 and in the 'jupyter' group per RITM0903711 
 # and make sure these dirs are writable by the `users` group.
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
     sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers && \
-    useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
+    groupadd -r jupyter --gid $NB_GID && \
+    useradd -m -s /bin/bash -N -g jupyter -u $NB_UID $NB_USER && \
     mkdir -p $CONDA_DIR && \
     chown $NB_USER:$NB_GID $CONDA_DIR && \
     chmod g+w /etc/passwd && \
@@ -62,7 +63,7 @@ RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
 
 USER $NB_UID
 WORKDIR $HOME
-ARG PYTHON_VERSION=default
+ARG PYTHON_VERSION=3.6
 
 # Setup work directory for backward-compatibility
 RUN mkdir /home/$NB_USER/work && \
@@ -130,7 +131,9 @@ COPY jupyter_notebook_config.py /etc/jupyter/
 
 # Fix permissions on /etc/jupyter as root
 USER root
-RUN fix-permissions /etc/jupyter/
+RUN fix-permissions /etc/jupyter/ && \
+    fix-permissions "$(dirname $CONDA_DIR)" && \
+    fix-permissions "$(dirname $HOME)"
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
